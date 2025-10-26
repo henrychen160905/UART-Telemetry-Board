@@ -1,1 +1,1 @@
-UART Telemetry Board
+UART Telemetry Board for SoCET Intro 1 
