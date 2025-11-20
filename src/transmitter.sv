@@ -28,8 +28,9 @@ module transmitter #(
     // State variables: current holds the present state, next is for computational FSM state
     uart_state_t current_state, next_state;
     logic [31:0] bit_counter;
+    logic [2:0] bit_index;
 
-    // Sequential block for FSM state
+    // FSM state sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
             current_state <= IDLE; //Reset FSM to IDLE
@@ -37,36 +38,39 @@ module transmitter #(
             current_state <= next_state; //Update state on each clock edge
     end
 
-    // Sequential block for bit counter
+    // Bit counter sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
             bit_counter <= 0; //Reset counter on reset
-        else if (current_state == START)
-            bit_counter <= bit_counter + 1; //Increment counter while in START
-        else
-            bit_counter <= 0; //Reset counter when leaving START
+        else if (current_state == START || current_state == DATA) begin
+            if (bit_counter == cycles_per_bit)
+                bit_counter <= 0; //Reset counter for next bit
+            else
+                bit_counter <= bit_counter + 1; //Increment counter
+        end else
+            bit_counter <= 0; //Reset counter when leaving START/DATA
     end
 
-    // Sequential block for transmit wire
+    // Transmit wire sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
             transmit_wire <= 1; //Idle UART line is HIGH
-        else if (current_state == START)
-            transmit_wire <= 0; //Start bit
         else if (current_state == STOP)
             transmit_wire <= 1; //Stop bit
-        // DATA and PARITY can be added later
+        else if (current_state == START)
+            transmit_wire <= 0; //Start bit
+        else if (current_state == DATA)
+            transmit_wire <= data_in[bit_index]; //Send current data bit
+        else if (current_state == PARITY)
     end
 
-    // Combinational block for FSM next state logic
+    // FSM next state and bit_index combinational logic
     always_comb begin
         next_state = current_state; //Remain in current state
         fifo_read = 0; //Initialize FIFO
-
-        //FSM behavior based off current state
         case (current_state)
             IDLE: begin
-                //If FIFO has data start
+                //If FIFO has data, start transmission
                 if (!fifo_empty) begin
                     fifo_read = 1; //Read 1 byte from data in
                     next_state = START; //Move to START
@@ -74,11 +78,40 @@ module transmitter #(
             end
 
             START: begin
-                //Move to DATA after full bit period
-                if (bit_counter == cycles_per_bit)
+                //Move to DATA after full start bit period
+                if (bit_counter == cycles_per_bit) begin
                     next_state = DATA;
+                    bit_index = 0; //Start sending data bits from LSB
+                end
+            end
+
+            DATA: begin
+                //Move to next data bit or PARITY after bit period
+                if (bit_counter == cycles_per_bit) begin
+                    if (bit_index == 7)
+                        next_state = PARITY; //All 8 bits sent
+                    else begin
+                        bit_index = bit_index + 1; //Next bit
+                        next_state = DATA;
+                    end
+                end
+            end
+
+            PARITY: begin
+                //For now, move to STOP directly (parity not implemented yet)
+                if (bit_counter == cycles_per_bit)
+                    next_state = STOP;
+            end
+
+            STOP: begin
+                //Return to IDLE after stop bit
+                if (bit_counter == cycles_per_bit)
+                    next_state = IDLE;
             end
         endcase
     end
+
+    // Busy indicator
+    assign state_busy = (current_state != IDLE);
 
 endmodule
