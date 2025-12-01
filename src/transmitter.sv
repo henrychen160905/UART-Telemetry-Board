@@ -30,6 +30,13 @@ module transmitter #(
     logic [31:0] bit_counter;
     logic [2:0] bit_index;
 
+    //Data/Parity registers
+    logic [7:0] trans_data_reg; //A register to hold the byte being transmitted
+    logic parity_bit; //Calculates parity bit
+
+    //Parity Calc (even parity)
+    assign parity_bit = ^trans_data_reg; //^ is XOR
+
     // FSM state sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
@@ -38,74 +45,101 @@ module transmitter #(
             current_state <= next_state; //Update state on each clock edge
     end
 
-    // Bit counter sequential block
+    //Data register sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
-            bit_counter <= 0; //Reset counter on reset
-        else if (current_state == START || current_state == DATA) begin
-            if (bit_counter == cycles_per_bit)
+            trans_data_reg <= 8'b0; //Resets data registor
+        else if (fifo_read)
+            trans_data_reg <= data_in; //Load data when getting signal to read from FIFO
+    end 
+
+    //Bit index sequential block
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst)
+            bit_index <= 3'b0; //Reset bit index
+        else if (current_state == IDLE)
+            bit_index <= 3'b0; //Reset bit index
+        else if (current_state == DATA && bit_counter == cycles_per_bit -1) begin
+            bit_index <= bit_index + 1; //Increment bit index after each bit sent
+        end 
+    end 
+
+    // Bit counter sequential block
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst || current_state == IDLE)
+            bit_counter <= 0; //Reset counter on reset or IDLE
+        else if (current_state != IDLE) begin
+            if (bit_counter == cycles_per_bit-1)
                 bit_counter <= 0; //Reset counter for next bit
             else
                 bit_counter <= bit_counter + 1; //Increment counter
-        end else
-            bit_counter <= 0; //Reset counter when leaving START/DATA
+        end
     end
 
     // Transmit wire sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
-            transmit_wire <= 1; //Idle UART line is HIGH
-        else if (current_state == STOP)
-            transmit_wire <= 1; //Stop bit
-        else if (current_state == START)
-            transmit_wire <= 0; //Start bit
-        else if (current_state == DATA)
-            transmit_wire <= data_in[bit_index]; //Send current data bit
-        else if (current_state == PARITY)
+            transmit_wire <= 1'b1; //Idle UART line is HIGH
+        else begin
+            case (current_state)
+            IDLE:
+                transmit_wire <= 1'b1; //Stop bit
+            START:
+                transmit_wire <= 1'b0; //Start bit
+            DATA:
+                transmit_wire <= trans_data_reg[bit_index]; //Send current data bit
+            PARITY:
+                transmit_wire <= parity_bit; // Send parity bit
+            STOP: 
+                transmit_wire <= 1'b1; // Stop bit
+            default:
+                transmit_wire <= 1'b1; //Default to IDLE
+            endcase
+        end
     end
 
     // FSM next state and bit_index combinational logic
     always_comb begin
         next_state = current_state; //Remain in current state
-        fifo_read = 0; //Initialize FIFO
+        fifo_read = 1'b0; //Initialize FIFO 
+
+        //Check if full bit has been sent
+        logic bit_period_complete = (bit_counter == cycles_per_bit-1);
+
         case (current_state)
             IDLE: begin
                 //If FIFO has data, start transmission
                 if (!fifo_empty) begin
-                    fifo_read = 1; //Read 1 byte from data in
+                    fifo_read = 1'b1; //Read 1 byte from data in
                     next_state = START; //Move to START
                 end
             end
 
             START: begin
                 //Move to DATA after full start bit period
-                if (bit_counter == cycles_per_bit) begin
+                if (bit_period_complete) begin
                     next_state = DATA;
-                    bit_index = 0; //Start sending data bits from LSB
                 end
             end
 
             DATA: begin
                 //Move to next data bit or PARITY after bit period
-                if (bit_counter == cycles_per_bit) begin
-                    if (bit_index == 7)
-                        next_state = PARITY; //All 8 bits sent
-                    else begin
-                        bit_index = bit_index + 1; //Next bit
+                if (bit_period_complete) begin
+                    if (bit_index == 7) //All 8 bits sent
+                        next_state = PARITY; 
+                    else
                         next_state = DATA;
-                    end
                 end
             end
 
             PARITY: begin
-                //For now, move to STOP directly (parity not implemented yet)
-                if (bit_counter == cycles_per_bit)
+                if (bit_period_complete)
                     next_state = STOP;
             end
 
             STOP: begin
                 //Return to IDLE after stop bit
-                if (bit_counter == cycles_per_bit)
+                if (bit_period_complete)
                     next_state = IDLE;
             end
         endcase
