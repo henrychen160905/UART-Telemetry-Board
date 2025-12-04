@@ -1,6 +1,6 @@
 module receiver
 #(
-parameter int clk_freq = 50000000,
+parameter int clk_freq = 50_000_000,
 parameter int baud = 9600,
 parameter int num = 0
 )
