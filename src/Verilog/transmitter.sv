@@ -37,6 +37,9 @@ module transmitter #(
     //Parity Calc (even parity)
     assign parity_bit = ^trans_data_reg; //^ is XOR
 
+    // Bit period complete signal
+    wire bit_period_complete = (bit_counter == cycles_per_bit-1);
+
     // FSM state sequential block
     always_ff @(posedge clk or posedge rst) begin
         if (rst)
@@ -103,9 +106,6 @@ module transmitter #(
         next_state = current_state; //Remain in current state
         fifo_read = 1'b0; //Initialize FIFO 
 
-        //Check if full bit has been sent
-        logic bit_period_complete = (bit_counter == cycles_per_bit-1);
-
         case (current_state)
             IDLE: begin
                 //If FIFO has data, start transmission
@@ -141,6 +141,10 @@ module transmitter #(
                 //Return to IDLE after stop bit
                 if (bit_period_complete)
                     next_state = IDLE;
+            end
+
+            default: begin
+                next_state = IDLE;
             end
         endcase
     end

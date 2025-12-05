@@ -1,9 +1,9 @@
 #Makefile
 VERILATE := verilator
-VERILATE_FLAGS := --binary --trace-fst
+VERILATE_FLAGS := --binary --trace-fst -Mdir /tmp/verilator_obj
 
 #Source Files
-SOURCE_FILES := transmitter.sv receiver.sv
+SOURCE_FILES := transmitter.sv receiver.sv scoring_model.sv
 
 #Testbench File
 TESTBENCH_FILE := tb.sv
@@ -12,19 +12,21 @@ TESTBENCH_FILE := tb.sv
 TOP_MODULE := tb
 
 #Executable
-VERILATOR_EXE := V$(basename $(TOP_MODULE))
+VERILATOR_EXE := V$(TOP_MODULE)
 
 all: $(VERILATOR_EXE)
 	./$(VERILATOR_EXE)
 
 $(VERILATOR_EXE): $(SOURCE_FILES) $(TESTBENCH_FILE)
-	$(VERILATE) $(VERILATE_FLAGS) --top-module $(basename $(TOP_MODULE)) $^
-	cp obj_dir/$(VERILATOR_EXE) .
+	$(VERILATE) $(VERILATE_FLAGS) --top-module $(TOP_MODULE) $^
+	cp /tmp/verilator_obj/$(VERILATOR_EXE) .
 
 run: $(VERILATOR_EXE)
 	./$(VERILATOR_EXE)
+
 clean:
-	rm -rf obj dir
+	rm -rf /tmp/verilator_obj
 	rm -f $(VERILATOR_EXE)
 	rm -f waveform.fst
-PHONY: all run clean
+
+.PHONY: all run clean
