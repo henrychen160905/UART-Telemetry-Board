@@ -200,6 +200,108 @@ module tb;
         #500;
 
         $display("\n===== Simulation Complete =====");
+        //------------------------------------------------------------
+        // Test case 2: AMD Ryzen 5 2600 thermal limit (105°C)
+        //------------------------------------------------------------
+        $display("\n=== Test Case 2: Ryzen 5 2600 Thermal Limit ===\n");
+
+        // Telemetry packet for overheated Ryzen CPU
+        // CPU frequency: 3400 MHz base clock (0x0D48)
+        telemetry_packet[0] = 8'h48;  // CPU freq LSB (0x0D48)
+        telemetry_packet[1] = 8'h0D;  // CPU freq MSB
+
+        // Disk speed: 550 Mb/s (0x0226)
+        telemetry_packet[2] = 8'h26;  // Disk LSB
+        telemetry_packet[3] = 8'h02;  // Disk MSB
+
+        // Memory usage: 16384 MB (0x4000)
+        telemetry_packet[4] = 8'h00;  // Memory LSB
+        telemetry_packet[5] = 8'h40;  // Memory MSB
+
+        // Temperature: **105°C**  (decimal 105 = 0x0069)
+        telemetry_packet[6] = 8'h69;  // Temp LSB (105°C)
+        telemetry_packet[7] = 8'h00;  // Temp MSB
+
+        $display("Sending telemetry packet:");
+        $display("  CPU Freq:    3400 MHz");
+        $display("  Disk Speed:   550 Mb/s");
+        $display("  Memory:     16384 MB");
+        $display("  Temperature: 105°C  (Thermal Limit)\n");
+
+        // Reset DUT for second run
+        rst = 1;
+        packet_index = 0;
+        byte_count = 0;
+        score_printed = 0;
+        #100;
+        rst = 0;
+        #50;
+
+        $display("Starting transmission of Ryzen 2600 overheat packet...\n");
+
+        // Wait for all bytes to be transmitted and received
+        wait (byte_count == 8);
+        #1000;
+
+        $display("All bytes transmitted and received successfully for test 2.\n");
+
+        // Wait for scoring model
+        wait (score_valid);
+        #500;
+
+        $display("\n===== Test Case 2 Complete =====\n");
+        //$finish;
+
+        //------------------------------------------------------------
+        // Test case 3: Broken Sensor Causes System Fail (255°C)
+        //------------------------------------------------------------
+        $display("\n=== Test Case 3: Broken Sensor Causes System Fail ===\n");
+
+        // Telemetry packet for overheated system
+        // CPU frequency: 0 MHz base clock (0x0000)
+        telemetry_packet[0] = 8'h00;  // CPU freq LSB (0x0000)
+        telemetry_packet[1] = 8'h00;  // CPU freq MSB
+
+        // Disk speed: 0 Mb/s (0x0000)
+        telemetry_packet[2] = 8'h00;  // Disk LSB
+        telemetry_packet[3] = 8'h00;  // Disk MSB
+
+        // Memory usage: 0 MB (0x0000)
+        telemetry_packet[4] = 8'h00;  // Memory LSB
+        telemetry_packet[5] = 8'h00;  // Memory MSB
+
+        // Temperature: **255°C**  (decimal 255 = 0x00FF)
+        telemetry_packet[6] = 8'hFF;  // Temp LSB (255°C)
+        telemetry_packet[7] = 8'h00;  // Temp MSB
+
+        $display("Sending telemetry packet:");
+        $display("  CPU Freq:    0 MHz");
+        $display("  Disk Speed:   0 Mb/s");
+        $display("  Memory:     0 MB");
+        $display("  Temperature: 255°C  (Thermal Limit)\n");
+
+        // Reset DUT for third run
+        rst = 1;
+        packet_index = 0;
+        byte_count = 0;
+        score_printed = 0;
+        #100;
+        rst = 0;
+        #50;
+
+        $display("Starting transmission of broken sensor fail packet...\n");
+
+        // Wait for all bytes to be transmitted and received
+        wait (byte_count == 8);
+        #1000;
+
+        $display("All bytes transmitted and received successfully for test 3.\n");
+
+        // Wait for scoring model
+        wait (score_valid);
+        #500;
+
+        $display("\n===== Test Case 3 Complete =====\n");
         $finish;
     end
 

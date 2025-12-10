@@ -19,7 +19,7 @@ all: $(VERILATOR_EXE)
 
 $(VERILATOR_EXE): $(SOURCE_FILES) $(TESTBENCH_FILE)
 	$(VERILATE) $(VERILATE_FLAGS) --top-module $(TOP_MODULE) $^
-	cp /tmp/verilator_obj/$(VERILATOR_EXE) .
+	cp obj_dir/$(VERILATOR_EXE) .
 
 run: $(VERILATOR_EXE)
 	./$(VERILATOR_EXE)
