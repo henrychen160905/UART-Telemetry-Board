@@ -136,3 +136,4 @@ Score: 5462.30
 - **Default Timing**: 50 MHz clock, 9600 baud → 5208 cycles per bit
 - **Transmission**: 8 bytes @ 9600 baud ≈ 8.3 ms
 - **Verification**: Complete testbench with FST waveform output
+- "works outside of asicfab"
