@@ -1,6 +1,6 @@
 #Makefile
 VERILATE := verilator
-VERILATE_FLAGS := --binary --trace-fst -Mdir /tmp/verilator_obj
+VERILATE_FLAGS := --binary --trace-fst -Mdir obj_dir
 
 #Source Files
 SOURCE_FILES := Verilog/transmitter.sv Verilog/receiver.sv Verilog/scoring_model.sv
@@ -25,7 +25,7 @@ run: $(VERILATOR_EXE)
 	./$(VERILATOR_EXE)
 
 clean:
-	rm -rf /tmp/verilator_obj
+	rm -rf obj_dir
 	rm -f $(VERILATOR_EXE)
 	rm -f waveform.fst
 
