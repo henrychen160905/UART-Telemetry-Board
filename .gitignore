@@ -1,0 +1,20 @@
+# Verilator output directories
+obj_dir/
+verilator_obj/
+tmp/
+*.log
+
+# Verilated binary
+V*
+
+# Waveform dumps
+*.fst
+*.vcd
+
+# Editor/IDE files
+*.swp
+*.swo
+.DS_Store
+.vscode/
+.idea/
+
