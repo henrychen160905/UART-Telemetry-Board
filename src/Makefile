@@ -3,10 +3,10 @@ VERILATE := verilator
 VERILATE_FLAGS := --binary --trace-fst -Mdir /tmp/verilator_obj
 
 #Source Files
-SOURCE_FILES := transmitter.sv receiver.sv scoring_model.sv
+SOURCE_FILES := Verilog/transmitter.sv Verilog/receiver.sv Verilog/scoring_model.sv
 
 #Testbench File
-TESTBENCH_FILE := tb.sv
+TESTBENCH_FILE := Verilog/tb/tb.sv
 
 #Top_Module
 TOP_MODULE := tb
